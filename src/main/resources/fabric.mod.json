@@ -1,0 +1,38 @@
+{
+	"schemaVersion": 1,
+	"id": "ia_lia",
+	"version": "${version}",
+	"name": "ia_lia",
+	"description": "This is an example description! Tell everyone what your mod is about!",
+	"authors": [
+		"Me!"
+	],
+	"contact": {
+		"homepage": "https://fabricmc.net/",
+		"sources": "https://github.com/FabricMC/fabric-example-mod"
+	},
+	"license": "CC0-1.0",
+	"icon": "assets/ia_lia/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"com.kath.ialia.Ia_lia"
+		],
+		"client": [
+			"com.kath.ialia.client.Ia_liaClient"
+		]
+	},
+	"mixins": [
+		"ia_lia.mixins.json",
+		{
+			"config": "ia_lia.client.mixins.json",
+			"environment": "client"
+		}
+	],
+	"depends": {
+		"fabricloader": ">=0.19.5",
+		"minecraft": "~26.3",
+		"java": ">=25",
+		"fabric-api": "*"
+	}
+}
