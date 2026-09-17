@@ -10,7 +10,19 @@ public class LiaEntity extends PathfinderMob {
 
     private final LiaMemory memory = new LiaMemory();
 
-    public LiaEntity(EntityType<? extends PathfinderMob> entityType, Level world) {
+    private final LiaQTable qTable = new LiaQTable();
+
+    private final LiaLearning learning = new LiaLearning(qTable);
+
+    private LiaState previousState = null;
+
+    private LiaDecision.Action previousAction = null;
+
+
+    public LiaEntity(
+            EntityType<? extends PathfinderMob> entityType,
+            Level world
+    ) {
         super(entityType, world);
     }
 
@@ -53,18 +65,53 @@ public class LiaEntity extends PathfinderMob {
             // obtener el estado actual de LIA
             LiaState state = LiaPerception.getCurrentState(this, 8);
 
+            /* el bot aprende de la experiencia anterior*/
+            if (previousState != null && previousAction != null) {
+
+                int reward = LiaReward.calculate(
+                        previousState,
+                        previousAction
+                );
+
+                learning.learn(
+                        previousState.toKey(),
+                        previousAction,
+                        reward,
+                        state.toKey()
+                );
+            }
+
+
+
             // decidir qu hacer segn el estado
+/*
             LiaDecision.Action action = LiaDecision.decide(state);
+*/
+
+               /* aqui el bot ahora decide que hacer segun lo aprendido.*/
+            LiaDecision.Action action = learning.chooseAction(state.toKey());
 
             Ia_lia.LOGGER.info(
                     "LIA decidio: {}",
                     action);
 
+
+            /* el bot ejecuta la decision*/
             LiaAction.execute(this, action);
+
+            //guardamos la experiencia actual.
+            previousState = state;
+            previousAction = action;
+
         }
     }
 
-    public LiaMemory getMemory() {
+
+
+    public LiaMemory getMemory()
+    {
+
+
         return memory;
     }
 }

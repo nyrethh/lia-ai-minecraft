@@ -21,16 +21,28 @@ public class LiaState {
     }
 
     public boolean isPlayerNearby() {
+
         return playerNearby;
     }
 
     public boolean isAnimalNearby() {
+
         return animalNearby;
     }
 
     public boolean isMonsterNearby() {
+
         return monsterNearby;
     }
+
+    public String toKey() {
+
+        return (playerNearby ? "1" : "0")
+                + (animalNearby ? "1" : "0")
+                + (monsterNearby ? "1" : "0");
+    }
+
+
 
     @Override
     public String toString() {
