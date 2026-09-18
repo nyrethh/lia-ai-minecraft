@@ -75,6 +75,34 @@ public class LiaPerception {
     );
 }
 
+    public static double getNearestMonsterDistance(LiaEntity lia, double distance) {
+
+        Entity nearestMonster = lia.level().getEntities(
+                        lia,
+                        lia.getBoundingBox().inflate(distance),
+                        entity -> entity instanceof Monster
+                ).stream()
+                .min((entity1, entity2) ->
+                        Double.compare(
+                                lia.distanceTo(entity1),
+                                lia.distanceTo(entity2)
+                        )
+                )
+                .orElse(null);
+
+        if (nearestMonster == null) {
+            return -1;
+        }
+
+        return lia.distanceTo(nearestMonster);
+    }
+
+
+
+
+
+
+
 
 
 }

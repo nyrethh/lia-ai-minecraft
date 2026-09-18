@@ -15,6 +15,12 @@ public class LiaMemory {
 
         String memory = "Vi un " + tipo; /*lo llama */
 
+
+
+        if (memories.contains(memory)) {
+            return;
+        }
+
         if (memories.size() >= 20) { /*solo va a recordar 20 cosas por ahora */
             memories.remove(0);
         }
@@ -23,7 +29,12 @@ public class LiaMemory {
         Ia_lia.LOGGER.info(
                 "LIA recuerda: {}",
                 memory);
+
+
+
+
     }
+
 
     public List<String> getMemories() {
         return memories;

@@ -16,7 +16,7 @@ public class LiaAction {
                 break;
 
             case WANDER:
-                //  RandomStrollGoal se encarga de este caso.
+                // RandomStrollGoal se encarga de este caso.
                 break;
 
             case APPROACH_PLAYER:
@@ -38,10 +38,17 @@ public class LiaAction {
             case FLEE_MONSTER:
 
                 Entity monster = lia.level().getEntities(
-                        lia,
-                        lia.getBoundingBox().inflate(8),
-                        entity -> entity instanceof net.minecraft.world.entity.monster.Monster
-                ).stream().findFirst().orElse(null);
+                                lia,
+                                lia.getBoundingBox().inflate(8),
+                                entity -> entity instanceof net.minecraft.world.entity.monster.Monster
+                        ).stream()
+                        .min((entity1, entity2) ->
+                                Double.compare(
+                                        lia.distanceTo(entity1),
+                                        lia.distanceTo(entity2)
+                                )
+                        )
+                        .orElse(null);
 
                 if (monster != null) {
 

@@ -19,6 +19,10 @@ public class LiaQTable {
         return actions.getOrDefault(action, 0.0);
     }
 
+    public boolean hasState(String state) {
+        return table.containsKey(state);
+    }
+
     /* Cambia el valor de una acción para una situaciin determinada. */
     public void setQValue(
             String state,
@@ -60,8 +64,10 @@ public class LiaQTable {
             double value = getQValue(state, action);
 
             if (value > bestValue) {
+
                 bestValue = value;
                 bestAction = action;
+
             }
         }
 

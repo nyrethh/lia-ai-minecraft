@@ -51,6 +51,17 @@ public class LiaLearning {
 
     public LiaDecision.Action chooseAction(String state) {
 
+        // Si es un estado completamente nuevo,
+        // LIA explora una acción al azar.
+        if (!qTable.hasState(state)) {
+
+            LiaDecision.Action[] actions =
+                    LiaDecision.Action.values();
+
+            return actions[random.nextInt(actions.length)];
+        }
+
+        // Si ya conoce el estado, aplica epsilon-greedy.
         if (random.nextDouble() < explorationRate) {
 
             LiaDecision.Action[] actions =

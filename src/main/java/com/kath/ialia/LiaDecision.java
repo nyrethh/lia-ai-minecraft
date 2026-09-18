@@ -3,10 +3,10 @@ package com.kath.ialia;
 public class LiaDecision {
 
     public enum Action {
-        IDLE,
-        WANDER,
-        APPROACH_PLAYER,
-        FLEE_MONSTER
+        IDLE, /* quedarse quieto*/
+        WANDER, /*deambular*/
+        APPROACH_PLAYER, /* acercarse al jugador */
+        FLEE_MONSTER  /* huir*/
     }
 
     public static Action decide(LiaState state) {

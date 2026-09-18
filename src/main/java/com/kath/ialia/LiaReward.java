@@ -5,29 +5,38 @@ package com.kath.ialia;
 public class LiaReward {
 
 
-    /* calcular la accion de lia */
     public static int calculate(
             LiaState state,
-            LiaDecision.Action action /*la decision qe lia decido realizar */
+            LiaDecision.Action action,
+            double previousDistance,
+            double currentDistance,
+            boolean tookDamage
     ) {
 
-        /*si decidió huir entonces tiene una recompensa de 10pts */
-        if (state.isMonsterNearby()
-                && action == LiaDecision.Action.FLEE_MONSTER) {
 
-            return 10;
-        }
-/*si decide quedarse quieta al ver un mounstro entonces es negativo */
-        if (state.isMonsterNearby()
-                && action != LiaDecision.Action.FLEE_MONSTER) {
 
-            return -10;
+        // Recibir daño siempre es una experiencia negativa.
+        if (tookDamage) {
+            return -20;
         }
 
-        if (state.isPlayerNearby()
-                && action == LiaDecision.Action.APPROACH_PLAYER) {
+        if (action == LiaDecision.Action.FLEE_MONSTER) {
 
-            return 5;
+            // Si no podemos comparar las distancias
+            // no damos recompensa
+            if (previousDistance < 0 || currentDistance < 0) {
+                return 0;
+            }
+
+            // el mounstruo esta mas lejos
+            if (currentDistance > previousDistance) {
+                return 10;
+            }
+
+            // esta mas cerca el mounstruo
+            if (currentDistance < previousDistance) {
+                return -10;
+            }
         }
 
         return 0;
