@@ -10,6 +10,8 @@ public class LiaReward {
             LiaDecision.Action action,
             double previousDistance,
             double currentDistance,
+            double previousPlayerDistance,
+            double currentPlayerDistance,
             boolean tookDamage
     ) {
 
@@ -22,8 +24,7 @@ public class LiaReward {
 
         if (action == LiaDecision.Action.FLEE_MONSTER) {
 
-            // Si no podemos comparar las distancias
-            // no damos recompensa
+            /*Si no podemos comparar las distancias no damos recompensa*/
             if (previousDistance < 0 || currentDistance < 0) {
                 return 0;
             }
@@ -35,6 +36,22 @@ public class LiaReward {
 
             // esta mas cerca el mounstruo
             if (currentDistance < previousDistance) {
+                return -10;
+            }
+        }
+
+        if (action == LiaDecision.Action.APPROACH_PLAYER) {
+
+            if (previousPlayerDistance < 0
+                    || currentPlayerDistance < 0) {
+                return 0;
+            }
+
+            if (currentPlayerDistance < previousPlayerDistance) {
+                return 10;
+            }
+
+            if (currentPlayerDistance > previousPlayerDistance) {
                 return -10;
             }
         }
