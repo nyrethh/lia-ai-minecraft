@@ -6,10 +6,16 @@ public class LiaDecision {
         IDLE, /* quedarse quieto*/
         WANDER, /*deambular*/
         APPROACH_PLAYER, /* acercarse al jugador */
-        FLEE_MONSTER  /* huir*/
+        APPROACH_ITEM,
+        FLEE_MONSTER, /* huir*/
+        JUMP,
+        REACT_APPROACH_PLAYER,
+        REACT_FLEE_PLAYER,
+        REACT_IDLE
+
     }
 
-    public static Action decide(LiaState state) {
+    /*public static Action decide(LiaState state) {
 
         if (state.isMonsterNearby()) {
             return Action.FLEE_MONSTER;
@@ -24,5 +30,5 @@ public class LiaDecision {
         }
 
         return Action.IDLE;
-    }
+    }*/
 }

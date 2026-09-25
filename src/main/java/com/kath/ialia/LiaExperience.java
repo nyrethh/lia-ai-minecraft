@@ -30,11 +30,13 @@ public class LiaExperience {
         return action;
     }
 
-    public boolean tookDamage() {
+    public boolean tookDamage()
+    {
         return tookDamage;
     }
 
-    public double getDistance() {
+    public double getDistance()
+    {
         return distance;
     }
 

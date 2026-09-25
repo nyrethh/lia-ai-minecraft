@@ -14,6 +14,7 @@ public class LiaLearning {
 
     private final Random random = new Random();
 
+
     public LiaLearning(LiaQTable qTable) {
         this.qTable = qTable;
     }
@@ -135,52 +136,81 @@ public class LiaLearning {
 
     private LiaState stateFromKey(String key) {
 
+        String[] parts = key.split("\\|");
+
         boolean playerNearby =
-                key.charAt(0) == '1';
+                parts[0].charAt(0) == '1';
 
         boolean animalNearby =
-                key.charAt(1) == '1';
+                parts[0].charAt(1) == '1';
 
         boolean monsterNearby =
-                key.charAt(2) == '1';
+                parts[0].charAt(2) == '1';
+
+        boolean tookDamage =
+                parts.length > 3 && parts[3].equals("1");
+
+        boolean woodNearby =
+                parts.length > 4 && parts[4].equals("1");
+
+        boolean itemNearby =
+                parts.length > 5 && parts[5].equals("1");
+
+
+        boolean playerJumping =
+                parts.length > 6 && parts[6].equals("1");
 
         return new LiaState(
                 playerNearby,
                 animalNearby,
                 monsterNearby,
+                itemNearby,
                 -1,
                 -1,
-                false
+                tookDamage,
+                woodNearby,
+                playerJumping
         );
     }
 
-    private List<LiaDecision.Action> getValidActions(
-            LiaState state
-    ) {
 
-        List<LiaDecision.Action> actions =
-                new ArrayList<>();
 
-        // Estas dos siempre tienen sentido.
+
+
+    private List<LiaDecision.Action> getValidActions(LiaState state) {
+
+        List<LiaDecision.Action> actions = new ArrayList<>();
+
         actions.add(LiaDecision.Action.IDLE);
         actions.add(LiaDecision.Action.WANDER);
+        actions.add(LiaDecision.Action.JUMP);
 
-        // Solo acercarse si hay un jugador.
         if (state.isPlayerNearby()) {
-
-            actions.add(
-                    LiaDecision.Action.APPROACH_PLAYER
-            );
+            actions.add(LiaDecision.Action.APPROACH_PLAYER);
         }
 
-        // Solo huir si hay un monstruo.
+        if (state.isPlayerJumping()) {
+            actions.add(LiaDecision.Action.REACT_APPROACH_PLAYER);
+            actions.add(LiaDecision.Action.REACT_FLEE_PLAYER);
+            actions.add(LiaDecision.Action.REACT_IDLE);
+
+
+        }
+
+        if (state.isItemNearby()) {
+            actions.add(LiaDecision.Action.APPROACH_ITEM);
+        }
+
         if (state.isMonsterNearby()) {
-
-            actions.add(
-                    LiaDecision.Action.FLEE_MONSTER
-            );
+            actions.add(LiaDecision.Action.FLEE_MONSTER);
         }
+
+        Ia_lia.LOGGER.info(
+                "LIA acciones disponibles: {}",
+                actions
+        );
 
         return actions;
     }
+
 }

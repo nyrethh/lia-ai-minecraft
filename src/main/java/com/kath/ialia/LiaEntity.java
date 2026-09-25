@@ -6,7 +6,7 @@ import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.ai.goal.RandomStrollGoal;
 import net.minecraft.world.level.Level;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.entity.monster.Monster; //clase monster de mc
+import net.minecraft.world.entity.monster.Monster;
 
 public class LiaEntity extends PathfinderMob {
 
@@ -15,15 +15,28 @@ public class LiaEntity extends PathfinderMob {
 
     private final LiaQTable qTable = new LiaQTable();
 
-    private final LiaLearning learning = new LiaLearning(qTable);
+    private final LiaLearning learning =
+            new LiaLearning(qTable);
+
+    private final LiaItemKnowledge itemKnowledge =
+            new LiaItemKnowledge();
 
     private LiaState previousState = null;
 
     private LiaDecision.Action previousAction = null;
 
+
     private double previousMonsterDistance = -1;
+    private double previousItemDistance = -1;
     private String previousEntity = "none";
     private double previousDistance = -1;
+
+    private boolean previousPlayerJumping = false;
+
+
+
+
+
 
 
     private boolean tookDamage = false;
@@ -40,36 +53,28 @@ public class LiaEntity extends PathfinderMob {
     protected void registerGoals() {
         super.registerGoals();
 
-
         this.goalSelector.addGoal(
                 2,
-                new RandomStrollGoal(this, 0.5) /*movimiento*/
+                new RandomStrollGoal(this, 0.5)
         );
     }
 
-    /* sirve para buscar monstruos cercanos y hace que lia sea su objetivo*/
+    /* Busca monstruos cercanos y hace que LIA sea su objetivo. */
     private void makeNearbyMonstersTargetLia() {
 
-        /* busca todas las entidades que esten a un maximo de 8bloques*/
         var monsters = this.level().getEntities(
                 this,
                 this.getBoundingBox().inflate(8),
                 entity -> entity instanceof Monster
         );
 
-
         for (var entity : monsters) {
 
-            //convertir la entidad encontrada en monster. o sea,malo
             Monster monster = (Monster) entity;
 
-            //si el malo no tiene un objetivo entonces se hace que LIA si lo sea.
-            if (monster.getTarget() == null) {
-                monster.setTarget(this);
-            }
+            monster.setTarget(this);
         }
     }
-
 
     @Override
     public void tick() {
@@ -77,10 +82,13 @@ public class LiaEntity extends PathfinderMob {
 
         if (!this.level().isClientSide() && this.tickCount % 10 == 0) {
 
-
             makeNearbyMonstersTargetLia();
 
-            var entidades = LiaPerception.getNearbyEntities(this, 8);
+            var entidades =
+                    LiaPerception.getNearbyEntities(this, 8);
+
+            var items =
+                    LiaPerception.getNearbyItems(this, 8);
 
             if (entidades.isEmpty()) {
 
@@ -104,21 +112,46 @@ public class LiaEntity extends PathfinderMob {
                 }
             }
 
+
+
+
+
+            boolean playerJumping =
+                    LiaPerception.isPlayerJumping(this, 8);
+
+            boolean newPlayerJump =
+                    playerJumping && !previousPlayerJumping;
+
             // Obtiene el estado actual de LIA.
             LiaState state =
                     LiaPerception.getCurrentState(
                             this,
                             8,
-                            tookDamage
+                            tookDamage,
+                            newPlayerJump
                     );
 
             double monsterDistance =
-                    LiaPerception.getNearestMonsterDistance(this, 8);
+                    LiaPerception.getNearestMonsterDistance(
+                            this,
+                            8
+                    );
+
+            double itemDistance = items.stream()
+                    .min((item1, item2) ->
+                            Double.compare(
+                                    this.distanceTo(item1),
+                                    this.distanceTo(item2)
+                            )
+                    )
+                    .map(item -> (double) this.distanceTo(item))
+                    .orElse(-1.0);
 
             double playerDistance =
-                    LiaPerception.getNearestPlayerDistance(this, 8);
-
-
+                    LiaPerception.getNearestPlayerDistance(
+                            this,
+                            8
+                    );
 
             Ia_lia.LOGGER.info(
                     "LIA | Distancia al monstruo mas cercano: {}",
@@ -129,8 +162,6 @@ public class LiaEntity extends PathfinderMob {
                     "LIA | Distancia al jugador mas cercano: {}",
                     playerDistance
             );
-
-
 
             LiaWorldObservation observation =
                     LiaPerception.observeWorld(this, 4);
@@ -145,21 +176,33 @@ public class LiaEntity extends PathfinderMob {
                     observation.getEntities()
             );
 
-// LIA aprende los bloques que descubre.
+            // LIA aprende los bloques que descubre.
             for (String block : observation.getBlocks()) {
                 knowledge.learnBlock(block);
             }
 
-// LIA aprende las entidades que descubre.
+            // LIA aprende las entidades que descubre.
             for (String entity : observation.getEntities()) {
                 knowledge.learnEntity(entity);
             }
 
+            // LIA consulta lo que ha aprendido sobre cada objeto.
+            for (var item : items) {
 
+                String itemName =
+                        LiaPerception.identifyItem(item);
 
+                double value =
+                        itemKnowledge.getValue(itemName);
 
+                Ia_lia.LOGGER.info(
+                        "LIA: He detectado un objeto: {} | Valor aprendido: {}",
+                        itemName,
+                        value
+                );
+            }
 
-            /*LIA aprende de la experiencia anterior*/
+            /* LIA aprende de la experiencia anterior. */
             if (previousState != null && previousAction != null) {
 
                 int reward = LiaReward.calculate(
@@ -167,6 +210,8 @@ public class LiaEntity extends PathfinderMob {
                         previousAction,
                         previousMonsterDistance,
                         monsterDistance,
+                        previousItemDistance,
+                        itemDistance,
                         previousPlayerDistance,
                         playerDistance,
                         tookDamage
@@ -179,16 +224,14 @@ public class LiaEntity extends PathfinderMob {
                         state.toKey()
                 );
 
-                // Guarda la experiencia que acaba de vivir LIA.
-                // Guarda la experiencia que acaba de vivir LIA.
-   /* double distance = -1;
+                if (previousAction == LiaDecision.Action.APPROACH_ITEM
+                        && !previousEntity.equals("none")) {
 
-                if (monsterDistance >= 0) {
-                    distance = monsterDistance;
-
-                } else if (playerDistance >= 0) {
-                    distance = playerDistance;
-                }*/
+                    itemKnowledge.learn(
+                            previousEntity,
+                            reward
+                    );
+                }
 
                 knowledge.rememberExperience(
                         previousEntity,
@@ -199,18 +242,19 @@ public class LiaEntity extends PathfinderMob {
                 );
             }
 
-            /* la recompensa de esta experiencia*/
+            // La recompensa de esta experiencia.
             tookDamage = false;
 
-            /* LIA recibe el estado completo */
+            /* LIA recibe el estado completo. */
             LiaDecision.Action action =
                     learning.chooseAction(state);
+
+
 
             Ia_lia.LOGGER.info(
                     "LIA decidio: {}",
                     action
             );
-
 
             String currentEntity = "none";
             double currentDistance = -1;
@@ -220,39 +264,75 @@ public class LiaEntity extends PathfinderMob {
 
             if (action == LiaDecision.Action.FLEE_MONSTER) {
 
-                var nearestMonster = nearbyEntities.stream()
-                        .filter(entity -> entity instanceof Monster)
-                        .min((entity1, entity2) ->
-                                Double.compare(
-                                        this.distanceTo(entity1),
-                                        this.distanceTo(entity2)
-                                ))
-                        .orElse(null);
+                var nearestMonster =
+                        nearbyEntities.stream()
+                                .filter(entity ->
+                                        entity instanceof Monster)
+                                .min((entity1, entity2) ->
+                                        Double.compare(
+                                                this.distanceTo(entity1),
+                                                this.distanceTo(entity2)
+                                        ))
+                                .orElse(null);
 
                 if (nearestMonster != null) {
 
                     currentEntity =
-                            LiaPerception.identifySpecificEntity(nearestMonster);
+                            LiaPerception.identifySpecificEntity(
+                                    nearestMonster
+                            );
 
                     currentDistance =
                             this.distanceTo(nearestMonster);
                 }
 
-            } else if (action == LiaDecision.Action.APPROACH_PLAYER) {
+            } else if (action == LiaDecision.Action.APPROACH_ITEM) {
 
-                var nearestPlayer = nearbyEntities.stream()
-                        .filter(entity -> entity instanceof net.minecraft.world.entity.player.Player)
-                        .min((entity1, entity2) ->
-                                Double.compare(
-                                        this.distanceTo(entity1),
-                                        this.distanceTo(entity2)
-                                ))
-                        .orElse(null);
+                var nearestItem =
+                        items.stream()
+                                .min((item1, item2) ->
+                                        Double.compare(
+                                                this.distanceTo(item1),
+                                                this.distanceTo(item2)
+                                        ))
+                                .orElse(null);
+
+                if (nearestItem != null) {
+
+                    currentEntity =
+                            LiaPerception.identifyItem(nearestItem);
+
+                    currentDistance =
+                            this.distanceTo(nearestItem);
+
+                    Ia_lia.LOGGER.info(
+                            "LIA intenta acercarse a: {} | Valor aprendido: {}",
+                            currentEntity,
+                            itemKnowledge.getValue(currentEntity)
+                    );
+                }
+
+            } else if (
+                    action == LiaDecision.Action.APPROACH_PLAYER
+            ) {
+
+                var nearestPlayer =
+                        nearbyEntities.stream()
+                                .filter(entity ->
+                                        entity instanceof net.minecraft.world.entity.player.Player)
+                                .min((entity1, entity2) ->
+                                        Double.compare(
+                                                this.distanceTo(entity1),
+                                                this.distanceTo(entity2)
+                                        ))
+                                .orElse(null);
 
                 if (nearestPlayer != null) {
 
                     currentEntity =
-                            LiaPerception.identifySpecificEntity(nearestPlayer);
+                            LiaPerception.identifySpecificEntity(
+                                    nearestPlayer
+                            );
 
                     currentDistance =
                             this.distanceTo(nearestPlayer);
@@ -260,35 +340,56 @@ public class LiaEntity extends PathfinderMob {
 
             } else {
 
-                var nearestEntity = nearbyEntities.stream()
-                        .min((entity1, entity2) ->
-                                Double.compare(
-                                        this.distanceTo(entity1),
-                                        this.distanceTo(entity2)
-                                ))
-                        .orElse(null);
+                var nearestEntity =
+                        nearbyEntities.stream()
+                                .min((entity1, entity2) ->
+                                        Double.compare(
+                                                this.distanceTo(entity1),
+                                                this.distanceTo(entity2)
+                                        ))
+                                .orElse(null);
 
                 if (nearestEntity != null) {
 
                     currentEntity =
-                            LiaPerception.identifySpecificEntity(nearestEntity);
+                            LiaPerception.identifySpecificEntity(
+                                    nearestEntity
+                            );
 
                     currentDistance =
                             this.distanceTo(nearestEntity);
                 }
             }
+            /* LIA ejecuta lo que decidió. */
+            String pickedItem =
+                    LiaAction.execute(this, action);
+
+            if (pickedItem != null) {
+
+                Ia_lia.LOGGER.info(
+                        "LIA completo la recogida de: {}",
+                        pickedItem
+                );
+
+                // Recoger correctamente tiene una recompensa positiva.
+                itemKnowledge.learn(
+                        pickedItem,
+                        20
+                );
 
 
-            /* LIA ejecuta lo que decidio. */
-            LiaAction.execute(this, action);
+            }
 
             // Guarda la experiencia actual.
             previousState = state;
             previousAction = action;
             previousMonsterDistance = monsterDistance;
+            previousItemDistance = itemDistance;
             previousPlayerDistance = playerDistance;
             previousEntity = currentEntity;
             previousDistance = currentDistance;
+            previousPlayerJumping = playerJumping;
+
         }
     }
 
@@ -314,16 +415,14 @@ public class LiaEntity extends PathfinderMob {
     }
 
     public LiaMemory getMemory() {
-
         return memory;
     }
 
-
-
-    public LiaKnowledge getKnowledge()
-    {
+    public LiaKnowledge getKnowledge() {
         return knowledge;
     }
+
+    public LiaItemKnowledge getItemKnowledge() {
+        return itemKnowledge;
+    }
 }
-
-

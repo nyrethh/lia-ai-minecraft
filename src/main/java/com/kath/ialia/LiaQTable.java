@@ -13,7 +13,7 @@ import java.util.Map;
 
 public class LiaQTable {
 
-    /* Estado > Acción > Valor */
+    /* Estado > Accion > Valor */
     private final Map<String, Map<LiaDecision.Action, Double>> table =
             new HashMap<>();
 
@@ -29,7 +29,7 @@ public class LiaQTable {
         load();
     }
 
-    /* Busca el valor de una acción */
+    /* Busca el valor de una accion */
     public double getQValue(
             String state,
             LiaDecision.Action action
@@ -48,7 +48,7 @@ public class LiaQTable {
         return table.containsKey(state);
     }
 
-    /* Cambia el valor de una acción */
+    /* Cambia el valor de una accion */
     public void setQValue(
             String state,
             LiaDecision.Action action,
@@ -83,7 +83,7 @@ public class LiaQTable {
         return maxValue;
     }
 
-    /* Busca la mejor acción */
+    /* busca la mejor accion */
     public LiaDecision.Action getBestAction(String state) {
 
         LiaDecision.Action bestAction = null;
