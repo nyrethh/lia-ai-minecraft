@@ -8,6 +8,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.world.entity.item.ItemEntity;
+import java.util.Comparator;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -88,6 +89,12 @@ private static boolean canSeeEntity(
 
 
 
+        boolean projectileNearby =
+                isProjectileNearby(lia, distance);
+
+        boolean shieldAvailable =
+                isShieldAvailable(lia);
+
         boolean woodNearby =
                 isWoodNearby(lia, (int) distance);
 
@@ -131,7 +138,9 @@ private static boolean canSeeEntity(
                 getNearestMonsterDistance(lia, distance),
                 tookDamage,
                 woodNearby,
-                playerJumping
+                playerJumping,
+                projectileNearby,
+                shieldAvailable
         );
     }
 
@@ -281,14 +290,97 @@ private static boolean canSeeEntity(
         return getNearbyEntities(lia, distance).stream()
                 .filter(entity -> entity instanceof ItemEntity)
                 .map(entity -> (ItemEntity) entity)
+                .filter(item ->
+                        !(item.getItem().getItem()
+                                instanceof net.minecraft.world.item.ArrowItem)
+                )
                 .toList();
     }
-
     public static String identifyItem(ItemEntity itemEntity) {
         return BuiltInRegistries.ITEM
                 .getKey(itemEntity.getItem().getItem())
                 .getPath();
     }
+
+    public static boolean isShieldAvailable(LiaEntity lia) {
+
+        /* revisa las manos */
+        if (lia.getItemInHand(
+                net.minecraft.world.InteractionHand.MAIN_HAND
+        ).getItem() instanceof net.minecraft.world.item.ShieldItem) {
+            return true;
+        }
+
+        if (lia.getItemInHand(
+                net.minecraft.world.InteractionHand.OFF_HAND
+        ).getItem() instanceof net.minecraft.world.item.ShieldItem) {
+            return true;
+        }
+
+        /* revisa el inventario */
+        for (int slot = 0;
+             slot < lia.getInventory().getContainerSize();
+             slot++) {
+
+            if (lia.getInventory()
+                    .getItem(slot)
+                    .getItem()
+                    instanceof net.minecraft.world.item.ShieldItem) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+//busca el monstruo mas cercano y devuelve el nombre real.
+    public static String getNearestMonsterType(
+            LiaEntity lia,
+            double distance
+    ) {
+
+        Entity nearestMonster =
+                getNearbyEntities(lia, distance).stream()
+                        .filter(entity -> entity instanceof Monster)
+                        .min((entity1, entity2) ->
+                                Double.compare(
+                                        lia.distanceTo(entity1),
+                                        lia.distanceTo(entity2)
+                                )
+                        )
+                        .orElse(null);
+
+        if (nearestMonster == null) {
+            return "none";
+        }
+
+        return identifySpecificEntity(nearestMonster);
+    }
+
+// detectar proyectiles
+public static boolean isProjectileNearby(
+        LiaEntity lia,
+        double distance
+) {
+    return lia.level().getEntities(
+            lia,
+            lia.getBoundingBox().inflate(distance),
+            entity ->
+                    entity instanceof net.minecraft.world.entity.projectile.Projectile
+    ).stream().findAny().isPresent();
+}
 
 
 
@@ -315,8 +407,7 @@ private static boolean canSeeEntity(
             return false;
         }
 
-        // Si el jugador está subiendo y no está en el suelo,
-        // acaba de iniciar un salto.
+
         return !nearestPlayer.onGround()
                 && nearestPlayer.getDeltaMovement().y > 0;
     }
@@ -327,6 +418,43 @@ private static boolean canSeeEntity(
 
 
 
+    /*  Busca el tronco más cercano dentro del radio indicado Devuelve null si no encuentra ninguno. */
+    public static BlockPos getNearestLog(
+            LiaEntity lia,
+            int radius
+    ) {
+        BlockPos nearestLog = null;
+        double nearestDistance = Double.MAX_VALUE;
+
+        BlockPos origin = lia.blockPosition();
+
+        for (int x = -radius; x <= radius; x++) {
+            for (int y = -2; y <= 4; y++) {
+                for (int z = -radius; z <= radius; z++) {
+
+                    BlockPos pos = origin.offset(x, y, z);
+
+                    if (!lia.level().getBlockState(pos)
+                            .is(BlockTags.LOGS)) {
+                        continue;
+                    }
+
+                    double distance = lia.distanceToSqr(
+                            pos.getX() + 0.5,
+                            pos.getY() + 0.5,
+                            pos.getZ() + 0.5
+                    );
+
+                    if (distance < nearestDistance) {
+                        nearestDistance = distance;
+                        nearestLog = pos;
+                    }
+                }
+            }
+        }
+
+        return nearestLog;
+    }
 
 
 

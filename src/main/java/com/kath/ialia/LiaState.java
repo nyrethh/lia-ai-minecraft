@@ -14,6 +14,8 @@ public class LiaState {
     private final boolean woodNearby;
 
     private final boolean playerJumping;
+    private final boolean projectileNearby;
+    private final boolean shieldAvailable;
 
     public LiaState(
             boolean playerNearby,
@@ -24,7 +26,9 @@ public class LiaState {
             double monsterDistance,
             boolean tookDamage,
             boolean woodNearby,
-            boolean playerJumping
+            boolean playerJumping,
+            boolean projectileNearby,
+            boolean shieldAvailable
     ) {
         this.playerNearby = playerNearby;
         this.animalNearby = animalNearby;
@@ -38,6 +42,8 @@ public class LiaState {
         this.woodNearby = woodNearby;
 
         this.playerJumping = playerJumping;
+        this.projectileNearby = projectileNearby;
+        this.shieldAvailable = shieldAvailable;
     }
 
     /* Los getters */
@@ -78,6 +84,16 @@ public class LiaState {
         return playerJumping;
     }
 
+    public boolean isProjectileNearby() {
+        return projectileNearby;
+    }
+
+    public boolean isShieldAvailable() {
+        return shieldAvailable;
+    }
+
+
+
     public String toKey() {
 
         return (playerNearby ? "1" : "0")
@@ -94,7 +110,11 @@ public class LiaState {
                 + "|"
                 + (itemNearby ? "1" : "0")
                 + "|"
-                + (playerJumping ? "1" : "0");
+                + (playerJumping ? "1" : "0")
+                + "|"
+                + (projectileNearby ? "1" : "0")
+                + "|"
+                + (shieldAvailable ? "1" : "0");
     }
 
     private String getDistanceKey(double distance) {
@@ -129,3 +149,5 @@ public class LiaState {
                 '}';
     }
 }
+
+

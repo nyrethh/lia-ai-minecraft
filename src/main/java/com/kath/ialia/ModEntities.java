@@ -15,21 +15,30 @@ public class ModEntities {
             .sized(0.6f, 1.8f)
             .build(ResourceKey.create(
                     BuiltInRegistries.ENTITY_TYPE.key(),
-                    Identifier.fromNamespaceAndPath(Ia_lia.MOD_ID, "lia")
+                    Identifier.fromNamespaceAndPath(
+                            Ia_lia.MOD_ID,
+                            "lia"
+                    )
             ));
 
     public static void register() {
+
         Registry.register(
                 BuiltInRegistries.ENTITY_TYPE,
-                Identifier.fromNamespaceAndPath(Ia_lia.MOD_ID, "lia"),
+                Identifier.fromNamespaceAndPath(
+                        Ia_lia.MOD_ID,
+                        "lia"
+                ),
                 LIA
         );
 
         FabricDefaultAttributeRegistry.register(
                 LIA,
-                LiaEntity.createMobAttributes().build()
+                LiaEntity.createAttributes().build()
         );
 
-        Ia_lia.LOGGER.info("LIA ha sido registrada.");
+        Ia_lia.LOGGER.info(
+                "LIA ha sido registrada."
+        );
     }
 }

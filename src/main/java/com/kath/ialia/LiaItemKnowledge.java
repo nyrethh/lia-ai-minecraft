@@ -1,3 +1,4 @@
+
 package com.kath.ialia;
 
 import java.util.HashMap;
@@ -5,7 +6,7 @@ import java.util.Map;
 
 public class LiaItemKnowledge {
 
-    // Guarda cuánto valor ha aprendido Lia sobre cada objeto.
+    // Guarda cuánto valor ha aprendido LIA sobre cada objeto.
     private final Map<String, Double> itemValues = new HashMap<>();
 
     public double getValue(String itemName) {
@@ -13,7 +14,6 @@ public class LiaItemKnowledge {
     }
 
     public void learn(String itemName, double reward) {
-
         double currentValue = getValue(itemName);
 
         double newValue =
@@ -32,5 +32,27 @@ public class LiaItemKnowledge {
 
     public Map<String, Double> getItemValues() {
         return itemValues;
+    }
+
+    // Aprende a valorar las herramientas según el tiempo de tala.
+    public void learnToolTime(String toolName, int ticks) {
+        if (ticks <= 0) {
+            return;
+        }
+
+        double reward = 100.0 / ticks;
+
+        learn("tool:" + toolName, reward);
+
+        Ia_lia.LOGGER.info(
+                "LIA compara herramientas | Herramienta: {} | Tiempo: {} ticks | Recompensa: {}",
+                toolName,
+                ticks,
+                reward
+        );
+    }
+
+    public double getToolValue(String toolName) {
+        return getValue("tool:" + toolName);
     }
 }

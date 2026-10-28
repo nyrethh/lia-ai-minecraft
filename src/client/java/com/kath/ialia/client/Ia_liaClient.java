@@ -28,7 +28,10 @@ public class Ia_liaClient implements ClientModInitializer {
 
                     @Override
                     public Identifier getTextureLocation(HumanoidRenderState state) {
-                        return Identifier.withDefaultNamespace("textures/entity/player/wide/steve.png");
+                        return Identifier.fromNamespaceAndPath(
+                                "ia_lia",
+                                "textures/entity/lia.png"
+                        );
                     }
                 }
         );

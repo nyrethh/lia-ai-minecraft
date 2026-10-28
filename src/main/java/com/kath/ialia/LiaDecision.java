@@ -7,8 +7,13 @@ public class LiaDecision {
         WANDER, /*deambular*/
         APPROACH_PLAYER, /* acercarse al jugador */
         APPROACH_ITEM,
+        CHOP_TREE,
         FLEE_MONSTER, /* huir*/
+        ATTACK_MONSTER, /* atacar monstruo */
         JUMP,
+        BLOCK, /* protegerse con escudo */
+        CROUCH, /* agacharse */
+        HIDE,/* cubrirse*/
         REACT_APPROACH_PLAYER,
         REACT_FLEE_PLAYER,
         REACT_IDLE

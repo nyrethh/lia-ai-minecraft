@@ -7,8 +7,22 @@ import net.minecraft.world.entity.ai.goal.RandomStrollGoal;
 import net.minecraft.world.level.Level;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.monster.Monster;
+import net.minecraft.world.SimpleContainer;
+import net.minecraft.world.item.ItemStack;
 
-public class LiaEntity extends PathfinderMob {
+
+
+import net.minecraft.world.entity.npc.InventoryCarrier;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
+
+
+import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+
+
+public class LiaEntity extends PathfinderMob
+        implements InventoryCarrier {
 
     private final LiaMemory memory = new LiaMemory();
     private final LiaKnowledge knowledge = new LiaKnowledge();
@@ -33,6 +47,9 @@ public class LiaEntity extends PathfinderMob {
 
     private boolean previousPlayerJumping = false;
 
+    private int pendingActionReward = 0;
+    private boolean attackSuccessful = false;
+    private boolean monsterKilled = false;
 
 
 
@@ -40,14 +57,57 @@ public class LiaEntity extends PathfinderMob {
 
 
     private boolean tookDamage = false;
+    private boolean blockedAttack = false;
     private double previousPlayerDistance = -1;
+    private int shieldBlockTicks = 0;
 
+    private static final int INVENTORY_SIZE = 27;
+
+    private final SimpleContainer inventory =
+            new SimpleContainer(INVENTORY_SIZE);
     public LiaEntity(
             EntityType<? extends PathfinderMob> entityType,
             Level world
     ) {
         super(entityType, world);
     }
+
+
+
+
+
+
+    public static AttributeSupplier.Builder createAttributes() {
+        return PathfinderMob.createMobAttributes()
+                .add(Attributes.MAX_HEALTH, 20.0)
+                .add(Attributes.MOVEMENT_SPEED, 0.3)
+                .add(Attributes.ATTACK_DAMAGE, 4.0);
+    }
+
+
+    @Override
+    protected void addAdditionalSaveData(
+            ValueOutput output
+    ) {
+
+        super.addAdditionalSaveData(output);
+
+        writeInventoryToTag(output);
+    }
+
+
+    @Override
+    protected void readAdditionalSaveData(
+            ValueInput input
+    ) {
+
+        super.readAdditionalSaveData(input);
+
+        readInventoryFromTag(input);
+    }
+
+
+
 
     @Override
     protected void registerGoals() {
@@ -59,30 +119,18 @@ public class LiaEntity extends PathfinderMob {
         );
     }
 
-    /* Busca monstruos cercanos y hace que LIA sea su objetivo. */
-    private void makeNearbyMonstersTargetLia() {
 
-        var monsters = this.level().getEntities(
-                this,
-                this.getBoundingBox().inflate(8),
-                entity -> entity instanceof Monster
-        );
-
-        for (var entity : monsters) {
-
-            Monster monster = (Monster) entity;
-
-            monster.setTarget(this);
-        }
-    }
 
     @Override
     public void tick() {
+
         super.tick();
+
+        LiaAction.tick(this);
 
         if (!this.level().isClientSide() && this.tickCount % 10 == 0) {
 
-            makeNearbyMonstersTargetLia();
+         /*   makeNearbyMonstersTargetLia();*/
 
             var entidades =
                     LiaPerception.getNearbyEntities(this, 8);
@@ -137,6 +185,31 @@ public class LiaEntity extends PathfinderMob {
                             8
                     );
 
+            String monsterType =
+                    LiaPerception.getNearestMonsterType(
+                            this,
+                            8
+                    );
+
+            boolean projectileNearby =
+                    LiaPerception.isProjectileNearby(
+                            this,
+                            8
+                    );
+
+            Ia_lia.LOGGER.info(
+                    "LIA | Proyectil cerca: {}",
+                    projectileNearby
+            );
+
+
+
+            Ia_lia.LOGGER.info(
+                    "LIA | Monstruo detectado: {}",
+                    monsterType
+            );
+
+
             double itemDistance = items.stream()
                     .min((item1, item2) ->
                             Double.compare(
@@ -152,6 +225,19 @@ public class LiaEntity extends PathfinderMob {
                             this,
                             8
                     );
+
+            double nearestItemValue = items.stream()
+                    .min((item1, item2) ->
+                            Double.compare(
+                                    this.distanceTo(item1),
+                                    this.distanceTo(item2)
+                            )
+                    )
+                    .map(item -> itemKnowledge.getValue(
+                            LiaPerception.identifyItem(item)
+                    ))
+                    .orElse(0.0);
+
 
             Ia_lia.LOGGER.info(
                     "LIA | Distancia al monstruo mas cercano: {}",
@@ -214,8 +300,16 @@ public class LiaEntity extends PathfinderMob {
                         itemDistance,
                         previousPlayerDistance,
                         playerDistance,
-                        tookDamage
+                        tookDamage,
+                        attackSuccessful,
+                        monsterKilled,
+                        blockedAttack
                 );
+                reward += pendingActionReward;
+                pendingActionReward = 0;
+                attackSuccessful = false;
+                monsterKilled = false;
+                blockedAttack = false;
 
                 learning.learn(
                         previousState.toKey(),
@@ -224,14 +318,7 @@ public class LiaEntity extends PathfinderMob {
                         state.toKey()
                 );
 
-                if (previousAction == LiaDecision.Action.APPROACH_ITEM
-                        && !previousEntity.equals("none")) {
 
-                    itemKnowledge.learn(
-                            previousEntity,
-                            reward
-                    );
-                }
 
                 knowledge.rememberExperience(
                         previousEntity,
@@ -245,9 +332,8 @@ public class LiaEntity extends PathfinderMob {
             // La recompensa de esta experiencia.
             tookDamage = false;
 
-            /* LIA recibe el estado completo. */
             LiaDecision.Action action =
-                    learning.chooseAction(state);
+                    learning.chooseAction(state, nearestItemValue);
 
 
 
@@ -374,8 +460,9 @@ public class LiaEntity extends PathfinderMob {
                 // Recoger correctamente tiene una recompensa positiva.
                 itemKnowledge.learn(
                         pickedItem,
-                        20
-                );
+                        20);
+
+                pendingActionReward += 20;
 
 
             }
@@ -393,12 +480,26 @@ public class LiaEntity extends PathfinderMob {
         }
     }
 
+
     @Override
     public boolean hurtServer(
             ServerLevel level,
             net.minecraft.world.damagesource.DamageSource source,
             float amount
     ) {
+
+        if (this.isUsingItem()
+                && this.getUseItem().getItem()
+                instanceof net.minecraft.world.item.ShieldItem) {
+
+            Ia_lia.LOGGER.info(
+                    "LIA bloqueo el ataque con el escudo."
+            );
+
+            blockedAttack = true;
+
+            return false;
+        }
 
         tookDamage = true;
 
@@ -414,6 +515,8 @@ public class LiaEntity extends PathfinderMob {
         );
     }
 
+
+
     public LiaMemory getMemory() {
         return memory;
     }
@@ -425,4 +528,60 @@ public class LiaEntity extends PathfinderMob {
     public LiaItemKnowledge getItemKnowledge() {
         return itemKnowledge;
     }
+
+
+    public SimpleContainer getInventory() {
+        return inventory;
+    }
+
+
+
+
+    public void setAttackSuccessful(boolean value) {
+        attackSuccessful = value;
+    }
+
+
+    public void setMonsterKilled(boolean value) {
+        monsterKilled = value;
+    }
+
+    public boolean wasAttackBlocked() {
+        return blockedAttack;
+    }
+
+
+    /* Guarda los objetos que caben y devuelve la cantidad guardada. */
+
+
+
+    public int addItemToInventory(ItemStack offeredStack) {
+        if (offeredStack.isEmpty()) {
+            return 0;
+        }
+
+        int originalCount = offeredStack.getCount();
+
+        // addItem devuelve la pila que no pudo guardar.
+        ItemStack remaining = inventory.addItem(offeredStack.copy());
+
+        return originalCount - remaining.getCount();
+    }
+
+
+
+    /* Saca objetos del inventario para equiparlos o utilizarlos. */
+    public ItemStack removeItemFromInventory(int slot, int amount) {
+        if (slot < 0 || slot >= inventory.getContainerSize() || amount <= 0) {
+            return ItemStack.EMPTY;
+        }
+
+        return inventory.removeItem(slot, amount);
+    }
+
+
+
+
 }
+
+

@@ -20,6 +20,7 @@ public class Ia_lia implements ModInitializer {
 	public void onInitialize() {
 		LOGGER.info("LIA ha despertado.");
 		ModEntities.register();
+		LiaCommand.register();
 
 		CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
 			dispatcher.register(

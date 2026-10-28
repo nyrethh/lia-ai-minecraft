@@ -183,21 +183,53 @@ public class LiaQTable {
                     continue;
                 }
 
-                String[] parts =
-                        line.split("\\|");
+                int lastSeparator =
+                        line.lastIndexOf("|");
 
-                if (parts.length != 3) {
+                int previousSeparator =
+                        line.lastIndexOf(
+                                "|",
+                                lastSeparator - 1
+                        );
+
+                if (previousSeparator == -1
+                        || lastSeparator == -1) {
+
                     continue;
                 }
 
                 String state =
-                        parts[0];
+                        line.substring(
+                                0,
+                                previousSeparator
+                        );
+
+                String actionName =
+                        line.substring(
+                                previousSeparator + 1,
+                                lastSeparator
+                        );
+
+                String valueText =
+                        line.substring(
+                                lastSeparator + 1
+                        );
 
                 LiaDecision.Action action =
-                        LiaDecision.Action.valueOf(parts[1]);
+                        LiaDecision.Action.valueOf(
+                                actionName
+                        );
 
                 double value =
-                        Double.parseDouble(parts[2]);
+                        Double.parseDouble(
+                                valueText
+                        );
+
+                setQValue(
+                        state,
+                        action,
+                        value
+                );
 
                 setQValue(
                         state,
